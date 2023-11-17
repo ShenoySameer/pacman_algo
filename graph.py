@@ -1,99 +1,84 @@
-def build_graph():
+from collections import defaultdict
+
+
+def build_graph(filename):
     #26, 29
     # Create an empty graph
-    pacman_map = {}
+    pacman_map = defaultdict(list)
 
     # Define the dimensions of the grid
-    rows, columns = 26, 29
+    columns, rows = 26, 29
 
-    pellet_coords = set()
-    for i in range(26):
-        pellet_coords.add((5, i))
-        pellet_coords.add((20, i))
+    coords = set()
 
-    for i in range(8):
-        pellet_coords.add((0, i))
-        pellet_coords.add((25, i))
-    for i in range(19, 23):
-        pellet_coords.add((0, i))
-        pellet_coords.add((25, i))
-    for i in range(25, 29):
-        pellet_coords.add((0, i))
-        pellet_coords.add((25, i))
-    for i in range(1,25):
-        pellet_coords.add((i, 28))
-    for i in range(26):
-        pellet_coords.add((i, 4))
-        pellet_coords.add((i, 0))
-    for i in range(1, 4):
-        pellet_coords.add((11, i))
-        pellet_coords.add((14, i))
-    for i in range(25):
-        pellet_coords.add((i, 19))
-        pellet_coords.add((i, 7))
-        pellet_coords.add((i, 25))
-    for i in range(6, 21):
-        pellet_coords.add((i, 22))
-    for i in range(5,7):
-        pellet_coords.add((8, i))
-        pellet_coords.add((17, i))
-    for i in range(3):
-        pellet_coords.add((2,22+i))
-        pellet_coords.add((23,22+i))
-        pellet_coords.add((17, 22+i))
-        pellet_coords.add((8, 22+i))
-        pellet_coords.add((11, 19+i))
-        pellet_coords.add((14, 19+i))
-        pellet_coords.add((11, 25+i))
-        pellet_coords.add((14, 25+i))
-
-    pellet_coords.add((1,22))
-    pellet_coords.add((24,22))
-    pellet_coords.remove((12, 25))
-    pellet_coords.remove((13, 25))
-    pellet_coords.remove((12, 22))
-    pellet_coords.remove((13, 22))
-    pellet_coords.remove((6, 25))
-    pellet_coords.remove((7, 25))
-    pellet_coords.remove((18, 25))
-    pellet_coords.remove((19, 25))
-    pellet_coords.remove((6, 7))
-    pellet_coords.remove((7, 7))
-    pellet_coords.remove((18, 7))
-    pellet_coords.remove((19, 7))
-    pellet_coords.remove((12, 19))
-    pellet_coords.remove((13, 19))
-    pellet_coords.remove((12, 7))
-    pellet_coords.remove((13, 7))
-    pellet_coords.remove((12,0))
-    pellet_coords.remove((13,0))
-
+    with open(filename) as f:
+        for line in f:
+            pos = tuple(int(x) for x in line.strip().split(','))
+            coords.add(pos)
 
     # Create nodes and connections
-    for i in range(rows):
-        for j in range(columns):
+    for i in range(columns):
+        for j in range(rows):
             node = (i, j)
-            if node in pellet_coords:
+            if node in coords:
 
                 neighbors = []
 
                 # Check and add connections to neighboring nodes
+                for diff in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
+                    pos = addition(node, diff)
+                    x, y = pos
 
-                if i > 0:
-                    neighbors.append((i - 1, j))  # Connect to the node above
-                if i < rows - 1:
-                    neighbors.append((i + 1, j))  # Connect to the node below
-                if j > 0:
-                    neighbors.append((i, j - 1))  # Connect to the node on the left
-                if j < columns - 1:
-                    neighbors.append((i, j + 1))  # Connect to the node on the right
+                    # if 0 <= x < rows and 0 <= y <= columns:
+                    if pos in coords:
+                        neighbors.append((x, y))
+
 
                 pacman_map[node] = neighbors
 
-    # Visualize a small portion of the graph
+    pacman_map[(0, 13)].append((-1, 13))
+    pacman_map[(25, 13)].append((26, 13))
+    pacman_map[(-1, 13)].append((-2, 13))
+    pacman_map[(26, 13)].append((27, 13))
+    pacman_map[(27, 13)].append((-2, 13))
+    pacman_map[(-2, 13)].append((27, 13))
 
     return pacman_map
 
+def movement_graph(G, pixel_separation, columns):
+    G2 = defaultdict(list)
+    for node, adjacent_nodes in G.items():
+        for adj_node in adjacent_nodes:
+            new_node = (node[0]*pixel_separation, node[1]*pixel_separation)
+            diff = difference(adj_node, node)
+            if abs(diff[0]) > 1 or abs(diff[1]) > 1:
+                continue
+            
+            for _ in range(pixel_separation):
+                next_node = addition(new_node, diff)
+
+                # connect passageway
+                if next_node[0] <= -pixel_separation*2:
+                    next_node = ((columns + 2)*pixel_separation, next_node[1])
+                elif next_node[0] >= (columns + 2)*pixel_separation:
+                    next_node = (-pixel_separation*2, next_node[1])
+                
+                G2[new_node].append(next_node)
+                new_node = next_node
+    
+    return G2
 
 
-print(build_graph())
+def difference(p1, p2):
+    return (p1[0] - p2[0], p1[1] - p2[1])
+
+def addition(p1, p2):
+    return (p1[0] + p2[0], p1[1] + p2[1])
+
+# print(build_graph("Assets/pacman_pellets.txt"))
+
+
+# graph = {(0, 0): [(0, 1), (1, 0)], (1, 0): [(0, 0), (1, 1), (2, 0)], (0, 1): [(0, 0), (1, 1)], (1, 1): [(1, 0), (0, 1), (2, 1)], (2, 0): [(1, 0), (2, 1)], (2, 1): [(1, 1), (2, 0)]}
+
+# print(movement_graph(graph, 8, 3))
+
